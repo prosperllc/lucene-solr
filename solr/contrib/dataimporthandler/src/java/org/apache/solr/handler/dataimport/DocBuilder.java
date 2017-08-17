@@ -83,6 +83,9 @@ public class DocBuilder {
   private DebugLogger debugLogger;
   private final RequestInfo reqParams;
   
+    //propser custom property
+  private String changeControlDetection;
+  
   public DocBuilder(DataImporter dataImporter, DIHWriter solrWriter, DIHProperties propWriter, RequestInfo reqParams) {
     INSTANCE.set(this);
     this.dataImporter = dataImporter;
@@ -293,6 +296,15 @@ public class DocBuilder {
 
   @SuppressWarnings("unchecked")
   private void finish(Map<String,Object> lastIndexTimeProps) {
+      
+      if(this.changeControlDetection != null &&
+         this.persistedProperties.get(this.changeControlDetection) != null){
+      
+          lastIndexTimeProps.put(this.changeControlDetection,
+                                 this.persistedProperties.get(this.changeControlDetection));
+      }
+      
+      
     LOG.info("Import completed successfully");
     statusMessages.put("", "Indexing completed. Added/Updated: "
             + importStatistics.docCount + " documents. Deleted "
@@ -351,6 +363,33 @@ public class DocBuilder {
       deleteAll(deletedKeys);
       // Make sure that documents are not re-created
     }
+      
+      //propser custom code
+      this.changeControlDetection = this.currentEntityProcessorWrapper
+                                          .getContext()
+                                          .getEntityAttribute("changeControlDetection");
+      
+      LOG.info("Change control detection Enabled>>" + this.changeControlDetection);
+      if (this.changeControlDetection != null
+          && !allPks.isEmpty()) {
+          
+          String changeVersion = (String)this.persistedProperties.get(this.changeControlDetection);
+          LOG.info("Will be running delta import for change version " + changeVersion);
+          Map<String, Object> firstElement = (Map)allPks.toArray()[0];
+          if (firstElement.get("changeVersion") != null)
+          {
+              String currentVersion = firstElement.get("changeVersion").toString();
+              if (currentVersion.equals(changeVersion))
+              {
+                  LOG.info("Skipping delta import as previous version and current version are the same");
+                  allPks.clear();
+              }
+              LOG.info("current change version" + currentVersion);
+              firstElement.put("changeVersion", Long.valueOf(Long.parseLong(changeVersion)));
+              this.persistedProperties.put(this.changeControlDetection, currentVersion);
+          }
+      }
+      
     deletedKeys = null;
     writer.setDeltaKeys(allPks);
 

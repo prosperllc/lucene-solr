@@ -368,12 +368,13 @@ public class DocBuilder {
       this.changeControlDetection = this.currentEntityProcessorWrapper
                                           .getContext()
                                           .getEntityAttribute("changeControlDetection");
-      
+
+      String changeVersion = null;
       LOG.info("Change control detection Enabled>>" + this.changeControlDetection);
       if (this.changeControlDetection != null
           && !allPks.isEmpty()) {
           
-          String changeVersion = (String)this.persistedProperties.get(this.changeControlDetection);
+          changeVersion = (String)this.persistedProperties.get(this.changeControlDetection);
           LOG.info("Will be running delta import for change version " + changeVersion);
           Map<String, Object> firstElement = (Map)allPks.toArray()[0];
           if (firstElement.get("changeVersion") != null)
@@ -407,7 +408,7 @@ public class DocBuilder {
     }
 
     if (!stop.get()) {
-      LOG.info("Delta Import completed successfully");
+      LOG.info("Delta Import completed successfully for changeversion: " + changeVersion);
     }
   }
 
